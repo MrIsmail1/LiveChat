@@ -1,0 +1,74 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+venv/
+.env.*
+pip-log.txt
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+target/
+build/
+
+# Ruby
+*.gem
+*.rbc
+.bundle/
+vendor/bundle/
+log/
+tmp/
+
+# Go
+bin/
+pkg/
+
+# JavaScript/TypeScript
+dist/
+build/
+coverage/
+.vscode/
+*.map
+
+# IDEs and Editors
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.code-workspace
+
+# Logs
+*.log
+
+# Operating System
+*.lock
+.DS_Store
+Thumbs.db
