@@ -31,18 +31,7 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV:-development}
     depends_on:
-      - mongodb
-
-  mongodb:
-    image: mongo:latest
-    container_name: mongo
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongodb-data:/data/db
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      - postgresql
 
   postgresql:
     image: postgres:latest
@@ -59,5 +48,4 @@ services:
 volumes:
   next_node_modules:
   nest_node_modules:
-  mongodb-data:
   postgresql-data:
