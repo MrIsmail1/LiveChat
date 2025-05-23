@@ -277,4 +277,14 @@ export class AuthService {
       },
     };
   }
+  async logout(sessionId: string) {
+    const session = await this.sessionService.findSessionById(sessionId);
+    if (!session) {
+      throw new NotFoundException('Session not found');
+    }
+    await this.sessionService.deleteSessionById(session.id);
+    return {
+      message: 'Logged out successfully',
+    };
+  }
 }

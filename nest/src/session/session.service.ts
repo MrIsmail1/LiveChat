@@ -31,4 +31,9 @@ export class SessionService {
       where: { userId },
     });
   }
+  async deleteSessionById(id: string) {
+    return await this.prismaService.session.delete({
+      where: { id },
+    });
+  }
 }
