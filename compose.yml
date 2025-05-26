@@ -3,6 +3,7 @@ services:
     build:
       context: ./next
       dockerfile: Dockerfile
+    restart: always
     container_name: next_service
     working_dir: /usr/src/app
     ports:
@@ -19,6 +20,7 @@ services:
       context: ./nest
       dockerfile: Dockerfile
     container_name: nest_service
+    restart: always
     working_dir: /usr/src/app
     ports:
       - "4500:4500"
@@ -29,20 +31,21 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV:-development}
     depends_on:
-      - mongodb
+      - postgresql
 
-  mongodb:
-    image: mongo:latest
-    container_name: mongo
-    ports:
-      - "27017:27017"
+  postgresql:
+    image: postgres:latest
+    container_name: postgres_db
     volumes:
-      - mongodb-data:/data/db
+      - postgresql-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
 
 volumes:
   next_node_modules:
   nest_node_modules:
-  mongodb-data:
+  postgresql-data:

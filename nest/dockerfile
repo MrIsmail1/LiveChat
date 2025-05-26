@@ -6,6 +6,10 @@ WORKDIR /usr/src/app
 # Install app dependencies
 COPY package*.json ./
 RUN npm install
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends openssl && \
+    rm -rf /var/lib/apt/lists/*
+
 
 # Bundle app source
 COPY . .
@@ -15,3 +19,4 @@ EXPOSE 4500
 
 # Run the app
 CMD [ "npm","run","start" ]
+
