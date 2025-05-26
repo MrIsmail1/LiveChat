@@ -1,10 +1,11 @@
 import {
   IsBoolean,
   IsEmail,
-  IsOptional,
+  IsEnum,
   IsString,
   MinLength,
 } from 'class-validator';
+import { UserRole } from 'src/types/auth';
 
 export class CreateUserDto {
   @IsString()
@@ -18,9 +19,8 @@ export class CreateUserDto {
   @IsString()
   @MinLength(8)
   passwordHash: string;
-  @IsString()
-  @IsOptional()
-  role?: string;
+  @IsEnum(UserRole)
+  role: string;
   @IsBoolean()
   isVerified: boolean;
 }

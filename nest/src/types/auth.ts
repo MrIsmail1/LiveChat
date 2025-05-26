@@ -6,6 +6,7 @@ export interface RegisterPayload {
   email: string;
   password: string;
   userAgent?: string;
+  role: string;
 }
 export interface LoginPayload {
   email: string;
@@ -19,4 +20,13 @@ export type SignOptionsAndSecret = SignOptions & {
 export interface ResetPasswordPayload {
   password: string;
   verificationCode: string;
+}
+
+export interface RefreshPayload {
+  sessionId: string;
+}
+
+export enum UserRole {
+  CLIENT = 'CLIENT',
+  COACH = 'COACH',
 }

@@ -1,19 +1,23 @@
+import { MailerService } from '@nestjs-modules/mailer';
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
+import { compare, hash } from 'bcrypt-ts';
 import VerificationCodeType from 'src/constants/verificationCodeType';
 import { SessionService } from 'src/session/session.service';
 import {
   LoginPayload,
+  RefreshPayload,
   RegisterPayload,
   ResetPasswordPayload,
   SignOptionsAndSecret,
 } from 'src/types/auth';
+
 import { UsersService } from 'src/users/users.service';
 import {
   fiveMinutesAgo,
@@ -31,6 +35,7 @@ export class AuthService {
     private jwtService: JwtService,
     private verificationCodeService: VerificationCodeService,
     private sessionService: SessionService,
+    private mailerService: MailerService,
   ) {}
   private accessTokenSignOptions: SignOptionsAndSecret = {
     expiresIn: '15m',
@@ -46,19 +51,23 @@ export class AuthService {
     lastName,
     email,
     password,
+    role,
     userAgent,
   }: RegisterPayload) {
     const existingUser = await this.usersService.findByEmail(email);
     if (existingUser) {
       throw new ConflictException('Email already in use');
     }
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await hash(password, 10);
+    if (role !== 'CLIENT' && role !== 'COACH') {
+      throw new BadRequestException('Invalid role');
+    }
     const user = await this.usersService.createUser({
       firstName,
       lastName,
       email,
       passwordHash,
-      role: 'USER',
+      role,
       isVerified: false,
     });
     const verificationCode =
@@ -68,9 +77,17 @@ export class AuthService {
         expiresAt: oneYearFromNow(),
       });
 
-    const url = `${process.env.APP_ORIGIN}/verify-email/${verificationCode.id}`;
+    const url = `${process.env.APP_ORIGIN}/auth/email/verify/${verificationCode.id}`;
 
-    //TODO: send email with verification code
+    await this.mailerService.sendMail({
+      to: email,
+      subject: 'Verify your email',
+      template: 'verify-email',
+      context: {
+        name: `${firstName} ${lastName}`,
+        url,
+      },
+    });
 
     const session = await this.sessionService.createSession({
       userId: user.id,
@@ -108,7 +125,7 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
-    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+    const isPasswordValid = await compare(password, user.passwordHash);
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -174,12 +191,13 @@ export class AuthService {
   }
 
   async refreshUserAccessToken(refreshToken: string) {
-    const { payload } = await this.jwtService.verifyAsync(refreshToken, {
-      secret: this.refreshTokenSignOptions.secret,
-    });
-    const session = await this.sessionService.findSessionById(
-      payload.sessionId,
+    const { sessionId } = await this.jwtService.verifyAsync<RefreshPayload>(
+      refreshToken,
+      {
+        secret: this.refreshTokenSignOptions.secret,
+      },
     );
+    const session = await this.sessionService.findSessionById(sessionId);
     const now = Date.now();
 
     if (!session || !session.expiresAt || session.expiresAt.getTime() < now) {
@@ -237,13 +255,22 @@ export class AuthService {
         });
       const url = `${process.env.APP_ORIGIN}/password/reset?code=${verificationCode.id}&exp=${expiresAt.getTime()}`;
 
-      //TODO: send email with verification code
+      await this.mailerService.sendMail({
+        to: email,
+        subject: 'Reset your password',
+        template: 'password-reset',
+        context: {
+          name: `${user.firstName} ${user.lastName}`,
+          url,
+        },
+      });
 
       return {
-        url,
+        message:
+          'If an account exists with this email, a password reset email has been sent',
       };
-    } catch (error) {
-      console.log('SendPasswordResetError:', error.message);
+    } catch (error: unknown) {
+      console.log('SendPasswordResetError:', (error as Error).message);
       return {};
     }
   }
@@ -262,7 +289,7 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await hash(password, 10);
     await this.usersService.updateUser(user.id, {
       passwordHash,
     });
