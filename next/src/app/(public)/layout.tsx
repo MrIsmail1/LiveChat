@@ -1,6 +1,6 @@
 "use client";
-import queryClient from "../config/queryClient";
-import { setNavigate } from "../lib/navigation";
+import queryClient from "../../config/queryClient";
+import { setNavigate } from "../../lib/navigation";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { useRouter } from "next/navigation";
