@@ -1,5 +1,7 @@
 "use client";
 
+import { ChatSidebar } from "@/components/ui/chat/chat-sidebar";
+import { ChatHeader } from "@/components/ui/chat/chat-header";
 import {
   ChatBubble,
   ChatBubbleAction,
@@ -24,23 +26,38 @@ import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import CodeDisplayBlock from "@/components/code-display-block";
 
-const ChatAiIcons = [
+interface User {
+  id: string;
+  name: string;
+  avatar?: string;
+  status: "online" | "offline";
+  lastActive: string;
+}
+
+const MOCK_USERS: User[] = [
   {
-    icon: CopyIcon,
-    label: "Copy",
+    id: "1",
+    name: "Jane Doe",
+    status: "online",
+    lastActive: "2 mins ago",
   },
   {
-    icon: RefreshCcw,
-    label: "Refresh",
-  },
-  {
-    icon: Volume2,
-    label: "Volume",
+    id: "2",
+    name: "John Smith",
+    status: "offline",
+    lastActive: "1 hour ago",
   },
 ];
 
-export default function Home() {
+interface Message {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export default function ChatPage() {
+  const [selectedUser, setSelectedUser] = useState<User>(MOCK_USERS[0]);
   const [isGenerating, setIsGenerating] = useState(false);
+  
   const {
     messages,
     setMessages,
@@ -50,13 +67,12 @@ export default function Home() {
     isLoading,
     reload,
   } = useChat({
-    onResponse(response) {
+    onResponse(response: any) {
       if (response) {
-        console.log(response);
         setIsGenerating(false);
       }
     },
-    onError(error) {
+    onError(error: Error) {
       if (error) {
         setIsGenerating(false);
       }
@@ -88,7 +104,6 @@ export default function Home() {
   };
 
   const handleActionClick = async (action: string, messageIndex: number) => {
-    console.log("Action clicked:", action, "Message index:", messageIndex);
     if (action === "Refresh") {
       setIsGenerating(true);
       try {
@@ -109,19 +124,29 @@ export default function Home() {
   };
 
   return (
-    <main className="flex h-screen w-full max-w-3xl flex-col items-center mx-auto">
-      <div className="flex-1 w-full overflow-y-auto py-6">
-        <ChatMessageList>
-          {/* Messages */}
-          {messages &&
-            messages.map((message, index) => (
+    <main className="flex h-screen w-full">
+      <ChatSidebar
+        users={MOCK_USERS}
+        selectedUserId={selectedUser.id}
+        onSelectUser={(userId) => {
+          const user = MOCK_USERS.find((u) => u.id === userId);
+          if (user) setSelectedUser(user);
+        }}
+      />
+      
+      <div className="flex flex-1 flex-col bg-gray-300">
+        <ChatHeader user={selectedUser} />
+        
+        <div className="flex-1 overflow-y-auto p-4">
+          <ChatMessageList>
+            {messages.map((message: Message, index: number) => (
               <ChatBubble
                 key={index}
-                variant={message.role == "user" ? "sent" : "received"}
+                variant={message.role === "user" ? "sent" : "received"}
               >
                 <ChatBubbleAvatar
                   src=""
-                  fallback={message.role == "user" ? "👨🏽" : "🤖"}
+                  fallback={message.role === "user" ? selectedUser.name.charAt(0) : "🤖"}
                 />
                 <ChatBubbleMessage>
                   {message.content
@@ -141,80 +166,50 @@ export default function Home() {
                         );
                       }
                     })}
-
-                  {message.role === "assistant" &&
-                    messages.length - 1 === index && (
-                      <div className="flex items-center mt-1.5 gap-1">
-                        {!isGenerating && (
-                          <>
-                            {ChatAiIcons.map((icon, iconIndex) => {
-                              const Icon = icon.icon;
-                              return (
-                                <ChatBubbleAction
-                                  variant="outline"
-                                  className="size-5"
-                                  key={iconIndex}
-                                  icon={<Icon className="size-3" />}
-                                  onClick={() =>
-                                    handleActionClick(icon.label, index)
-                                  }
-                                />
-                              );
-                            })}
-                          </>
-                        )}
-                      </div>
-                    )}
                 </ChatBubbleMessage>
               </ChatBubble>
             ))}
 
-          {/* Loading */}
-          {isGenerating && (
-            <ChatBubble variant="received">
-              <ChatBubbleAvatar src="" fallback="🤖" />
-              <ChatBubbleMessage isLoading />
-            </ChatBubble>
-          )}
-        </ChatMessageList>
-      </div>
+            {isGenerating && (
+              <ChatBubble variant="received">
+                <ChatBubbleAvatar src="" fallback="🤖" />
+                <ChatBubbleMessage isLoading />
+              </ChatBubble>
+            )}
+          </ChatMessageList>
+        </div>
 
-      {/* Form and Footer fixed at the bottom */}
-      <div className="w-full px-4 pb-4">
-        <form
-          ref={formRef}
-          onSubmit={onSubmit}
-          className="relative rounded-lg border bg-background focus-within:ring-1 focus-within:ring-ring"
-        >
-          <ChatInput
-            value={input}
-            onKeyDown={onKeyDown}
-            onChange={handleInputChange}
-            placeholder="Type your message here..."
-            className="rounded-lg bg-background border-0 shadow-none focus-visible:ring-0"
-          />
-          <div className="flex items-center p-3 pt-0">
-            <Button variant="ghost" size="icon">
-              <Paperclip className="size-4" />
-              <span className="sr-only">Attach file</span>
+        <div className="border-t p-4">
+          <form
+            ref={formRef}
+            onSubmit={onSubmit}
+            className="flex items-center gap-2"
+          >
+            <Button variant="ghost" size="icon" type="button">
+              <Paperclip className="h-4 w-4" />
             </Button>
-
-            <Button variant="ghost" size="icon">
-              <Mic className="size-4" />
-              <span className="sr-only">Use Microphone</span>
+            
+            <ChatInput
+              value={input}
+              onKeyDown={onKeyDown}
+              onChange={handleInputChange}
+              placeholder="Type your message here..."
+              className="flex-1"
+            />
+            
+            <Button variant="ghost" size="icon" type="button">
+              <Mic className="h-4 w-4" />
             </Button>
-
-            <Button
+            
+            <Button 
               disabled={!input || isLoading}
               type="submit"
-              size="sm"
-              className="ml-auto gap-1.5"
+              size="icon"
             >
-              Send Message
-              <CornerDownLeft className="size-3.5" />
+              <Send className="h-4 w-4" />
             </Button>
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
     </main>
   );
