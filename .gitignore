@@ -24,9 +24,6 @@ yarn.lock
 __pycache__/
 *.py[cod]
 *$py.class
-.env
-venv/
-.env.*
 pip-log.txt
 
 # Java

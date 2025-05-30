@@ -26,7 +26,7 @@ export function useChatSocket() {
 
   const sendMessage = useCallback(
     (room: string, text: string) => {
-      connect().emit("message", { room, text });
+      connect().emit("message", { room, message: text });
     },
     [connect]
   );
