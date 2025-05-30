@@ -6,7 +6,12 @@ import {
   HttpStatus,
   Param,
   Post,
+  Req,
+  Res,
+  UnauthorizedException,
 } from '@nestjs/common';
+import { Request, Response } from 'express';
+import { fifteenMinutesFromNow, thirtyDaysFromNow } from 'src/utils/date';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { PasswordForgetDto } from './dto/password-forget.dto';
@@ -19,13 +24,49 @@ export class AuthController {
 
   @HttpCode(HttpStatus.OK)
   @Post('login')
-  login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto);
+  async login(
+    @Body() loginDto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { accessToken, refreshToken, user } =
+      await this.authService.login(loginDto);
+    res.cookie('accessToken', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV !== 'development',
+      sameSite: 'strict',
+      expires: fifteenMinutesFromNow(),
+    });
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV !== 'development',
+      sameSite: 'strict',
+      expires: thirtyDaysFromNow(),
+      path: '/auth/refresh',
+    });
+    return { user };
   }
   @HttpCode(HttpStatus.OK)
   @Post('register')
-  register(@Body() registerDto: RegisterDto) {
-    return this.authService.register(registerDto);
+  async register(
+    @Body() registerDto: RegisterDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { accessToken, refreshToken, user } =
+      await this.authService.register(registerDto);
+    res.cookie('accessToken', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV !== 'development',
+      sameSite: 'strict',
+      expires: fifteenMinutesFromNow(),
+    });
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV !== 'development',
+      sameSite: 'strict',
+      expires: thirtyDaysFromNow(),
+      path: '/auth/refresh',
+    });
+    return { user };
   }
   @HttpCode(HttpStatus.OK)
   @Post('password/reset')
@@ -44,12 +85,40 @@ export class AuthController {
   }
   @HttpCode(HttpStatus.OK)
   @Get('logout')
-  logout(@Body('sessionId') sessionId: string) {
-    return this.authService.logout(sessionId);
+  async logout(
+    @Body('sessionId') sessionId: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    await this.authService.logout(sessionId);
+    res.clearCookie('accessToken');
+    res.clearCookie('refreshToken', { path: '/auth/refresh' });
+    return { message: 'Logged out successfully' };
   }
   @HttpCode(HttpStatus.OK)
   @Get('refresh')
-  refresh(@Body('refreshToken') refreshToken: string) {
-    return this.authService.refreshUserAccessToken(refreshToken);
+  async refresh(
+    @Res({ passthrough: true }) res: Response,
+    @Req() req: Request,
+  ) {
+    const oldRefreshToken = req.cookies.refreshToken;
+    if (!oldRefreshToken) {
+      throw new UnauthorizedException('No refresh token provided');
+    }
+    const { accessToken, refreshToken: newRefresh } =
+      await this.authService.refreshUserAccessToken(oldRefreshToken);
+    res.cookie('accessToken', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV !== 'development',
+      sameSite: 'strict',
+      expires: fifteenMinutesFromNow(),
+    });
+    res.cookie('refreshToken', newRefresh, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV !== 'development',
+      sameSite: 'strict',
+      expires: thirtyDaysFromNow(),
+      path: '/auth/refresh',
+    });
+    return { accessToken };
   }
 }

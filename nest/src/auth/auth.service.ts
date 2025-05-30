@@ -131,6 +131,7 @@ export class AuthService {
     }
     const session = await this.sessionService.createSession({
       userId: user.id,
+      expiresAt: thirtyDaysFromNow(),
       userAgent,
     });
 
@@ -191,6 +192,7 @@ export class AuthService {
   }
 
   async refreshUserAccessToken(refreshToken: string) {
+    console.log('refreshUserAccessToken', refreshToken);
     const { sessionId } = await this.jwtService.verifyAsync<RefreshPayload>(
       refreshToken,
       {
@@ -200,6 +202,7 @@ export class AuthService {
     const session = await this.sessionService.findSessionById(sessionId);
     const now = Date.now();
 
+    console.log('session', session);
     if (!session || !session.expiresAt || session.expiresAt.getTime() < now) {
       throw new UnauthorizedException('Session expired');
     }

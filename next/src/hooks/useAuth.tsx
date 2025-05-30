@@ -1,6 +1,6 @@
 "use client";
 import { getUser } from "@/lib/api";
-import { User } from "@/types/AuthResponses";
+import { User } from "@/types/auth";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";

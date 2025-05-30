@@ -1,47 +1,29 @@
-import { LoginSchema, RegisterSchema } from "@/schemas/authSchema";
-import axios from 'axios';
+import { nestAPI } from "@/config/apiClient";
+import {
+  LoginSchema,
+  PasswordResetSchema,
+  RegisterSchema,
+} from "@/schemas/authSchema";
+import { registerResponse, User } from "@/types/auth";
 
-const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+export const login = async (data: LoginSchema) =>
+  nestAPI.post("/auth/login", data);
 
-// Ajout d'intercepteurs pour le débogage
-api.interceptors.request.use(request => {
-  console.log('Starting Request', {
-    url: request.url,
-    method: request.method,
-    data: request.data
-  });
-  return request;
-});
+export const register = async (data: RegisterSchema) =>
+  await nestAPI.post("/auth/register", data);
 
-api.interceptors.response.use(
-  response => {
-    console.log('Response:', response.data);
-    return response;
-  },
-  error => {
-    console.error('API Error:', {
-      message: error.message,
-      response: error.response?.data,
-      status: error.response?.status
-    });
-    return Promise.reject(error);
-  }
-);
+export const verifyEmail = async (verificationCode: string) =>
+  nestAPI.get<{ message: string }>(`/auth/email/verify/${verificationCode}`);
 
-export const auth = {
-  login: async (data: LoginSchema) => {
-    const response = await api.post('/auth/login', data);
-    return response.data;
-  },
-  register: async (data: RegisterSchema) => {
-    const response = await api.post('/auth/register', data);
-    return response.data;
-  },
-};
+export const sendPasswordResetEmail = async (email: string) =>
+  nestAPI.post<{ message: string }>("/auth/password/forgot", { email });
 
-export default api;
+export const resetPassword = async (data: PasswordResetSchema) =>
+  nestAPI.post<{ message: string }>("/auth/password/reset", data);
+
+export const logout = () => nestAPI.get<{ message: string }>("/auth/logout");
+
+export const getUser = async (): Promise<User> =>
+  await nestAPI.get<User, User>("/users/profile");
+
+export const usersList = async () => nestAPI.get<User[], User[]>("/users");
