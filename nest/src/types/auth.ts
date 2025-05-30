@@ -30,3 +30,10 @@ export enum UserRole {
   CLIENT = 'CLIENT',
   COACH = 'COACH',
 }
+
+export interface JwtPayload {
+  id: string;
+  sessionId: string;
+  iat?: number;
+  exp?: number;
+}

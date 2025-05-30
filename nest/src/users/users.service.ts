@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { User } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
+import { UserProfile } from 'src/types/user';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
@@ -13,9 +14,20 @@ export class UsersService {
       where: { email },
     });
   }
-  async findById(id: string): Promise<User | null> {
+  async findById(id: string): Promise<UserProfile | null> {
     return await this.prisma.user.findUnique({
       where: { id },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        role: true,
+        isVerified: true,
+        createdAt: true,
+        updatedAt: true,
+        passwordHash: false,
+      },
     });
   }
   async createUser(dto: CreateUserDto): Promise<User> {
@@ -39,7 +51,23 @@ export class UsersService {
       where: { id },
     });
   }
-  async findAllUsers(): Promise<User[]> {
-    return await this.prisma.user.findMany();
+  async findAllUsers(userId: string): Promise<UserProfile[]> {
+    return await this.prisma.user.findMany({
+      where: {
+        id: {
+          not: userId,
+        },
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+        passwordHash: false,
+      },
+    });
   }
 }

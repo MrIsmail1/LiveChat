@@ -4,6 +4,7 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
+import { ChatModule } from './chat/chat.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { SessionModule } from './session/session.module';
 import { UsersModule } from './users/users.module';
@@ -16,6 +17,7 @@ import { VerificationCodeModule } from './verification-code/verification-code.mo
     VerificationCodeModule,
     AuthModule,
     PrismaModule,
+    ChatModule,
     MailerModule.forRoot({
       transport: {
         host: 'maildev',
@@ -34,6 +36,7 @@ import { VerificationCodeModule } from './verification-code/verification-code.mo
         },
       },
     }),
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],

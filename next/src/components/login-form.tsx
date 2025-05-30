@@ -1,14 +1,14 @@
 "use client";
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -16,66 +16,67 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { loginSchema, registerSchema } from "@/schemas/authSchema"
-import { useMutation } from "@tanstack/react-query"
-import { auth } from "@/lib/api"
-import { useRouter } from "next/navigation"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { z } from "zod"
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { login, register } from "@/lib/api";
+import { cn } from "@/lib/utils";
+import { loginSchema, registerSchema } from "@/schemas/authSchema";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 
 type LoginFormData = z.infer<typeof loginSchema>;
 type RegisterFormData = z.infer<typeof registerSchema>;
 type FormData = LoginFormData | RegisterFormData;
 
 interface AuthFormProps extends React.ComponentProps<"div"> {
-  mode: 'login' | 'register';
+  mode: "login" | "register";
   className?: string;
 }
 
-export function AuthForm({
-  mode,
-  className,
-  ...props
-}: AuthFormProps) {
+export function AuthForm({ mode, className, ...props }: AuthFormProps) {
   const router = useRouter();
-  const isLogin = mode === 'login';
+  const isLogin = mode === "login";
 
   const form = useForm<FormData>({
     resolver: zodResolver(isLogin ? loginSchema : registerSchema),
-    defaultValues: isLogin ? {
-      email: "",
-      password: "",
-    } : {
-      firstName: "",
-      lastName: "",
-      email: "",
-      password: "",
-      role: "CLIENT" as const,
-    },
+    defaultValues: isLogin
+      ? {
+          email: "",
+          password: "",
+        }
+      : {
+          firstName: "",
+          lastName: "",
+          email: "",
+          password: "",
+          role: "CLIENT" as const,
+        },
   });
 
   const {
     mutate: submitAuth,
     isPending,
     error,
+    isError,
   } = useMutation({
     mutationFn: async (data: FormData) => {
-      return isLogin ? auth.login(data as LoginFormData) : auth.register(data as RegisterFormData);
+      return isLogin
+        ? login(data as LoginFormData)
+        : register(data as RegisterFormData);
     },
-    onSuccess: (response) => {
+    onSuccess: () => {
       if (isLogin) {
-        if (response.accessToken) {
-          localStorage.setItem("accessToken", response.accessToken);
-          if (response.refreshToken) {
-            localStorage.setItem("refreshToken", response.refreshToken);
-          }
-        }
-        router.push("/dashboard");
+        router.push("/chatbot");
       } else {
         router.push("/login");
       }
@@ -87,28 +88,37 @@ export function AuthForm({
   }
 
   return (
-    <div className={cn("mt-12 mx-auto h-full w-lg flex flex-col justify-center", className)} {...props}>
+    <div
+      className={cn(
+        "mt-12 mx-auto h-full w-lg flex flex-col justify-center",
+        className
+      )}
+      {...props}
+    >
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">{isLogin ? "Connexion" : "Inscription"}</CardTitle>
+          <CardTitle className="text-2xl">
+            {isLogin ? "Connexion" : "Inscription"}
+          </CardTitle>
           <CardDescription>
-            {isLogin 
+            {isLogin
               ? "Connectez-vous pour accéder à votre tableau de bord."
-              : "Créez un compte pour accéder à votre tableau de bord."
-            }
+              : "Créez un compte pour accéder à votre tableau de bord."}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              {error && (
+              {isError && error && (
                 <Alert variant="destructive">
                   <AlertDescription>
-                    {isLogin ? "Email ou mot de passe incorrect." : "Erreur lors de l'inscription."}
+                    {isLogin
+                      ? "Email ou mot de passe incorrect."
+                      : "Erreur lors de l'inscription."}
                   </AlertDescription>
                 </Alert>
               )}
-              
+
               {!isLogin && (
                 <>
                   <FormField
@@ -147,7 +157,11 @@ export function AuthForm({
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="email@example.com" type="email" {...field} />
+                      <Input
+                        placeholder="email@example.com"
+                        type="email"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -172,49 +186,36 @@ export function AuthForm({
                 )}
               />
 
-              {!isLogin && (
-                <FormField
-                  control={form.control}
-                  name="role"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Rôle</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Sélectionnez votre rôle" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="CLIENT">Client</SelectItem>
-                          <SelectItem value="COACH">Coach</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-
               <Button className="w-full" type="submit" disabled={isPending}>
-                {isPending 
-                  ? (isLogin ? "Connexion en cours..." : "Inscription en cours...") 
-                  : (isLogin ? "Se connecter" : "S'inscrire")
-                }
+                {isPending
+                  ? isLogin
+                    ? "Connexion en cours..."
+                    : "Inscription en cours..."
+                  : isLogin
+                  ? "Se connecter"
+                  : "S'inscrire"}
               </Button>
 
               <div className="text-center text-sm">
                 {isLogin ? (
                   <>
                     Pas encore de compte ?{" "}
-                    <Button variant="link" className="p-0" onClick={() => router.push("/register")}>
+                    <Button
+                      variant="link"
+                      className="p-0"
+                      onClick={() => router.push("/register")}
+                    >
                       S'inscrire
                     </Button>
                   </>
                 ) : (
                   <>
                     Déjà un compte ?{" "}
-                    <Button variant="link" className="p-0" onClick={() => router.push("/login")}>
+                    <Button
+                      variant="link"
+                      className="p-0"
+                      onClick={() => router.push("/login")}
+                    >
                       Se connecter
                     </Button>
                   </>
