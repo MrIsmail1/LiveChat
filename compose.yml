@@ -1,0 +1,58 @@
+services:
+  next:
+    build:
+      context: ./next
+      dockerfile: Dockerfile
+    restart: always
+    container_name: next_service
+    working_dir: /usr/src/app
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./next:/usr/src/app
+      - next_node_modules:/usr/src/app/node_modules
+    command: sh -c "npm install && npm run dev"
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+
+  nest:
+    build:
+      context: ./nest
+      dockerfile: Dockerfile
+    container_name: nest_service
+    restart: always
+    working_dir: /usr/src/app
+    ports:
+      - "4500:4500"
+    volumes:
+      - ./nest:/usr/src/app
+      - nest_node_modules:/usr/src/app/node_modules
+    command: sh -c "npm install && npm run start:dev"
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+    depends_on:
+      - postgresql
+
+  postgresql:
+    image: postgres:latest
+    container_name: postgres_db
+    volumes:
+      - postgresql-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+  maildev:
+    image: maildev/maildev
+    container_name: maildev
+    ports:
+      - "1080:1080"
+      - "1025:1025"
+
+volumes:
+  next_node_modules:
+  nest_node_modules:
+  postgresql-data:

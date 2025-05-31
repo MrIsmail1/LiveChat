@@ -1,0 +1,140 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* 🎨 Couleurs custom Figma */
+:root {
+  /* Figma colors */
+  --color-primary-1: #FEFCFB;
+  --color-primary-2: #2D93A7;
+  --color-primary-3: #224355;
+  --color-primary-main: #621E2C;
+  --color-secondary-400: #E7E5DF;
+  --color-white: #FFFFFF;
+  --color-neutral-200: #FBF8F2;
+  --color-neutral-400: #E5E5E5;
+  --color-text: #333333;
+  --color-black: #000000;
+
+  /* radius */
+  --radius: 0.625rem;
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: var(--color-primary-main);
+  --primary-foreground: #fff;
+  --secondary: var(--color-secondary-400);
+  --secondary-foreground: var(--color-text);
+  --muted: var(--color-neutral-200);
+  --muted-foreground: var(--color-neutral-400);
+  --accent: var(--color-primary-2);
+  --accent-foreground: #fff;
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: var(--color-neutral-400);
+  --input: var(--color-neutral-400);
+  --ring: var(--color-primary-2);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: var(--color-white);
+  --sidebar-foreground: var(--color-text);
+  --sidebar-primary: var(--color-primary-2);
+  --sidebar-primary-foreground: #fff;
+  --sidebar-accent: var(--color-primary-1);
+  --sidebar-accent-foreground: var(--color-text);
+  --sidebar-border: var(--color-neutral-400);
+  --sidebar-ring: var(--color-primary-2);
+  --background: var(--color-white);
+  --foreground: var(--color-text);
+}
+
+.dark {
+  --background: var(--color-black);
+  --foreground: var(--color-white);
+  --card: var(--color-primary-3);
+  --card-foreground: var(--color-white);
+  --popover: var(--color-primary-3);
+  --popover-foreground: var(--color-white);
+  --primary: var(--color-primary-2);
+  --primary-foreground: #fff;
+  --secondary: var(--color-neutral-400);
+  --secondary-foreground: var(--color-black);
+  --muted: var(--color-neutral-400);
+  --muted-foreground: var(--color-white);
+  --accent: var(--color-primary-3);
+  --accent-foreground: var(--color-white);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: var(--color-neutral-400);
+  --input: var(--color-neutral-400);
+  --ring: var(--color-primary-2);
+  --sidebar: var(--color-primary-3);
+  --sidebar-foreground: var(--color-white);
+  --sidebar-primary: var(--color-primary-2);
+  --sidebar-primary-foreground: var(--color-white);
+  --sidebar-accent: var(--color-primary-1);
+  --sidebar-accent-foreground: var(--color-black);
+  --sidebar-border: var(--color-neutral-400);
+  --sidebar-ring: var(--color-primary-2);
+}
+
+@theme inline {
+  --color-primary-1: var(--color-primary-1);
+  --color-primary-2: var(--color-primary-2);
+  --color-primary-3: var(--color-primary-3);
+  --color-primary-main: var(--color-primary-main);
+  --color-secondary-400: var(--color-secondary-400);
+  --color-neutral-200: var(--color-neutral-200);
+  --color-neutral-400: var(--color-neutral-400);
+  --color-white: var(--color-white);
+  --color-black: var(--color-black);
+  --color-text: var(--color-text);
+}
+
+@layer base {
+
+  h1 {
+    font-size: 48px;
+    line-height: normal;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+  }
+
+  h2 {
+    font-size: 34px;
+    line-height: 58px;
+    font-weight: 600;
+    margin-bottom: 1.25rem;
+  }
+
+  h3 {
+    font-size: 22px;
+    line-height: 26px;
+    font-weight: 500;
+    margin-bottom: 1rem;
+  }
+
+  h4 {
+    font-size: 20px;
+    line-height: 22px;
+    font-weight: 500;
+    margin-bottom: 0.75rem;
+  }
+
+  p {
+    font-size: 14px;
+    line-height: 18px;
+    font-weight: 400;
+    margin-bottom: 0.75rem;
+  }
+
+  small {
+    font-size: 11px;
+    line-height: 18px;
+    font-weight: 400;
+    margin-bottom: 0.5rem;
+  }
+}
