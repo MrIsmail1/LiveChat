@@ -12,7 +12,7 @@ import { Socket } from 'socket.io';
 export class WsJwtGuard implements CanActivate {
   constructor(private readonly jwtService: JwtService) {}
 
-  async canActivate(ctx: ExecutionContext) {
+  async canActivate(ctx: ExecutionContext): Promise<boolean> {
     const client: Socket = ctx.switchToWs().getClient<Socket>();
 
     const rawCookie = client.handshake.headers.cookie;
@@ -21,24 +21,19 @@ export class WsJwtGuard implements CanActivate {
     }
 
     const cookies = cookie.parse(rawCookie);
-
     const token = cookies.accessToken;
     if (!token) {
-      throw new UnauthorizedException('No access token');
+      throw new UnauthorizedException('No access token cookie');
     }
 
     try {
-      const payload = await this.jwtService.verifyAsync<{ userId: string }>(
-        token,
-        {
-          secret: process.env.JWT_ACCESS_SECRET,
-        },
-      );
-
-      (client as any).user = { id: payload.userId };
+      const payload = this.jwtService.verify(token, {
+        secret: process.env.JWT_ACCESS_SECRET,
+      });
+      client.data.user = { id: (payload as any).userId };
       return true;
-    } catch (err) {
-      throw new UnauthorizedException('Invalid or expired token');
+    } catch {
+      throw new UnauthorizedException('Invalid access token');
     }
   }
 }

@@ -1,10 +1,11 @@
 "use client";
+
 import type { Message, UserJoined, UserLeft } from "@/types/chatSocket";
 import { useCallback, useEffect, useRef } from "react";
 import { io, Socket } from "socket.io-client";
 
 export function useChatSocket() {
-  const socketRef = useRef<Socket>(null);
+  const socketRef = useRef<Socket | null>(null);
 
   const connect = useCallback(() => {
     if (!socketRef.current) {
@@ -19,7 +20,14 @@ export function useChatSocket() {
 
   const joinRoom = useCallback(
     (room: string) => {
-      connect().emit("joinRoom", room);
+      connect().emit("joinRoom", { room });
+    },
+    [connect]
+  );
+
+  const leaveRoom = useCallback(
+    (room: string) => {
+      connect().emit("leaveRoom", { room });
     },
     [connect]
   );
@@ -31,30 +39,40 @@ export function useChatSocket() {
     [connect]
   );
 
-  const onMessage = useCallback(
-    (cb: (msg: Message) => void) => {
-      connect().on("message", cb); // listen for "message" now
-      return () => connect().off("message", cb);
-    },
-    [connect]
-  );
-
   const onUserJoined = useCallback(
     (cb: (info: UserJoined) => void) => {
-      connect().on("userJoined", cb);
-      return () => connect().off("userJoined", cb);
+      const socket = connect();
+      socket.on("userJoined", cb);
+      return () => {
+        socket.off("userJoined", cb);
+      };
     },
     [connect]
   );
 
   const onUserLeft = useCallback(
     (cb: (info: UserLeft) => void) => {
-      connect().on("userLeft", cb);
-      return () => connect().off("userLeft", cb);
+      const socket = connect();
+      socket.on("userLeft", cb);
+      return () => {
+        socket.off("userLeft", cb);
+      };
     },
     [connect]
   );
 
+  const onMessage = useCallback(
+    (cb: (msg: Message) => void) => {
+      const socket = connect();
+      socket.on("message", cb); // server emits "message"
+      return () => {
+        socket.off("message", cb);
+      };
+    },
+    [connect]
+  );
+
+  // When this hook unmounts, disconnect the socket
   useEffect(() => {
     return () => {
       socketRef.current?.disconnect();
@@ -62,5 +80,12 @@ export function useChatSocket() {
     };
   }, []);
 
-  return { joinRoom, sendMessage, onMessage, onUserJoined, onUserLeft };
+  return {
+    joinRoom,
+    leaveRoom,
+    sendMessage,
+    onUserJoined,
+    onUserLeft,
+    onMessage,
+  };
 }

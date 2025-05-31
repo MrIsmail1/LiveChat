@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
+import { UsersModule } from '../users/users.module';
 import { ChatGateway } from './chat.gateway';
 import { WsJwtGuard } from './ws-jwt.guard';
 
@@ -9,6 +10,7 @@ import { WsJwtGuard } from './ws-jwt.guard';
       secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: '1h' },
     }),
+    UsersModule,
   ],
   providers: [ChatGateway, WsJwtGuard],
 })

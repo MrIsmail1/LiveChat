@@ -1,6 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Phone, Video, Info } from "lucide-react";
+import { Info, Phone, Video } from "lucide-react";
 
 interface ChatHeaderProps {
   user: {
@@ -18,13 +18,16 @@ export function ChatHeader({ user }: ChatHeaderProps) {
         <Avatar>
           <AvatarImage src={user.avatar} />
           <AvatarFallback>
-            {user.name.split(" ").map((n) => n[0]).join("")}
+            {user.name
+              .split(" ")
+              .map((n) => n[0])
+              .join("")}
           </AvatarFallback>
         </Avatar>
         <div className="flex flex-col">
           <span className="text-sm font-medium text-zinc-50">{user.name}</span>
           <span className="text-xs text-zinc-400">
-            {user.status === "online" ? "Active now" : `Active ${user.lastActive}`}
+            {user.status === "online" ? "Active now" : ``}
           </span>
         </div>
       </div>
@@ -41,4 +44,4 @@ export function ChatHeader({ user }: ChatHeaderProps) {
       </div>
     </div>
   );
-} 
+}

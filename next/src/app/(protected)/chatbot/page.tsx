@@ -1,5 +1,10 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+
 import CodeDisplayBlock from "@/components/code-display-block";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,18 +17,24 @@ import { ChatInput } from "@/components/ui/chat/chat-input";
 import { ChatMessageList } from "@/components/ui/chat/chat-message-list";
 import { ChatSidebar } from "@/components/ui/chat/chat-sidebar";
 import { useChatSocket } from "@/hooks/useChatSocket";
+
 import { usersList } from "@/lib/api";
-import { User } from "@/types/auth";
-import { Message } from "@/types/chatSocket";
-import { useQuery } from "@tanstack/react-query";
+import type { User } from "@/types/auth";
+import type { Message } from "@/types/chatSocket";
+
+import useAuth from "@/hooks/useAuth";
 import { Mic, Paperclip, Send } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 
 export default function ChatPage() {
-  const { joinRoom, sendMessage, onMessage, onUserJoined, onUserLeft } =
-    useChatSocket();
+  const { user } = useAuth();
+  const {
+    joinRoom,
+    sendMessage,
+    onUserJoined,
+    onUserLeft,
+    onMessage,
+    leaveRoom,
+  } = useChatSocket();
 
   const { data: users, isLoading } = useQuery<User[]>({
     queryKey: ["users"],
@@ -49,74 +60,79 @@ export default function ChatPage() {
   }, [messages]);
 
   useEffect(() => {
-    onUserJoined(({ userId, color }) =>
-      setMessages((m) => [
-        ...m,
+    const cleanupJoined = onUserJoined(
+      ({ userId, color, firstName, lastName }) => {
+        if (!currentRoom.includes(userId)) return;
+        setMessages((prev) => [
+          ...prev,
+          {
+            room: currentRoom,
+            userId,
+            message: `${firstName} joined`,
+            color,
+            timestamp: new Date().toISOString(),
+            role: "user",
+          },
+        ]);
+      }
+    );
+
+    const cleanupLeft = onUserLeft(({ userId }) => {
+      if (!currentRoom.includes(userId)) return;
+      setMessages((prev) => [
+        ...prev,
         {
           room: currentRoom,
           userId,
-          message: `${userId.slice(-4)} joined`,
-          color,
+          message: `User left`,
+          color: "#888888",
           timestamp: new Date().toISOString(),
-          role: "assistant",
+          role: "user",
         },
-      ])
-    );
-    onUserLeft(({ userId }) =>
-      setMessages((m) => [
-        ...m,
-        {
-          room: currentRoom,
-          userId,
-          message: `${userId.slice(-4)} left`,
-          color: "#888",
-          timestamp: new Date().toISOString(),
-          role: "assistant",
-        },
-      ])
-    );
-    onMessage((payload) =>
-      setMessages((m) => [
-        ...m,
+      ]);
+    });
+
+    const cleanupMessage = onMessage((payload) => {
+      setMessages((prev) => [
+        ...prev,
         {
           ...payload,
-          role: payload.userId === selectedUser?.id ? "user" : "assistant",
+          role: "user",
         },
-      ])
-    );
-  }, [currentRoom, onUserJoined, onUserLeft, onMessage, selectedUser?.id]);
+      ]);
+    });
+
+    return () => {
+      cleanupJoined();
+      cleanupLeft();
+      cleanupMessage();
+    };
+  }, [currentRoom, onUserJoined, onUserLeft, onMessage]);
+
+  const myId = user?.id ?? "";
+  const prevRoomRef = useRef<string>("");
 
   const handleSelectUser = (userId: string) => {
     if (!users) return;
     const user = users.find((u) => u.id === userId);
     if (!user) return;
+    if (!myId) return;
 
     setSelectedUser(user);
-    console.log("selectedUser", selectedUser);
 
-    const myId = selectedUser?.id;
     const roomName = [userId, myId].sort().join("_");
-
+    if (prevRoomRef.current) {
+      leaveRoom(prevRoomRef.current);
+    }
     setCurrentRoom(roomName);
     setMessages([]);
     joinRoom(roomName);
+    prevRoomRef.current = roomName;
   };
 
   const handleSend = () => {
-    if (!msgText.trim() || !currentRoom) return;
-
+    if (!msgText.trim() || !currentRoom || !myId) return;
     sendMessage(currentRoom, msgText);
-    setMessages((m) => [
-      ...m,
-      {
-        room: currentRoom,
-        userId: "me",
-        message: msgText,
-        color: "#000",
-        timestamp: new Date().toISOString(),
-        role: "user",
-      },
-    ]);
     setMsgText("");
   };
 
@@ -127,19 +143,19 @@ export default function ChatPage() {
   return (
     <main className="flex h-screen w-full">
       <ChatSidebar
-        users={(users || []).map((u) => ({
-          ...u,
-          name: u.firstName + " " + u.lastName,
-        }))}
+        users={
+          users?.map((u) => ({
+            ...u,
+            name: `${u.firstName} ${u.lastName}`,
+          })) || []
+        }
         selectedUserId={selectedUser.id}
         onSelectUser={handleSelectUser}
       />
 
       <div className="flex flex-1 flex-col bg-gray-300">
         <ChatHeader
-          user={{
-            name: selectedUser.firstName + " " + selectedUser.lastName,
-          }}
+          user={{ name: `${selectedUser.firstName} ${selectedUser.lastName}` }}
         />
 
         <div className="flex-1 overflow-y-auto p-4" ref={messagesRef}>
@@ -149,10 +165,7 @@ export default function ChatPage() {
                 key={idx}
                 variant={msg.role === "user" ? "sent" : "received"}
               >
-                <ChatBubbleAvatar
-                  src=""
-                  fallback={msg.role === "user" ? "👤" : "🤖"}
-                />
+                <ChatBubbleAvatar src="" fallback={"👤"} />
                 <ChatBubbleMessage>
                   {msg.message.split("```").map((part, i) =>
                     i % 2 === 0 ? (
