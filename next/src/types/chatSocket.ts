@@ -16,6 +16,8 @@ export interface Message {
 export interface UserJoined {
   userId: string;
   color: string;
+  firstName: string;
+  lastName: string;
 }
 
 export interface UserLeft {

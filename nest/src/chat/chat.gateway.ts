@@ -1,17 +1,30 @@
-import { Injectable, Logger, UseGuards } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import {
-  ConnectedSocket,
-  MessageBody,
   OnGatewayConnection,
   OnGatewayDisconnect,
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
+import * as cookie from 'cookie';
 import { Server, Socket } from 'socket.io';
-import { ChatMessageDto, JoinRoomDto } from './dto/chat.dto';
-import { WsJwtGuard } from './ws-jwt.guard';
+import { UsersService } from '../users/users.service';
 
+interface JwtPayload {
+  userId: string;
+}
+
+interface JoinRoomDto {
+  room: string;
+}
+
+interface ChatMessageDto {
+  room: string;
+  message: string;
+}
+
+@Injectable()
 @WebSocketGateway({
   namespace: '/chat',
   path: '/chat-socket',
@@ -20,8 +33,6 @@ import { WsJwtGuard } from './ws-jwt.guard';
     credentials: true,
   },
 })
-@Injectable()
-@UseGuards(WsJwtGuard)
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
   private readonly logger = new Logger(ChatGateway.name);
@@ -38,54 +49,106 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     '#f032e6',
   ];
 
-  handleConnection(client: Socket) {
-    const user = client.data.user;
-    if (!user) {
-      this.logger.warn('Client connected without user data');
-      client.disconnect();
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly usersService: UsersService,
+  ) {}
+
+  async handleConnection(client: Socket) {
+    const rawCookie = client.handshake.headers.cookie;
+    if (!rawCookie) {
+      this.logger.warn(
+        `Client connected without any cookies (socketId=${client.id})`,
+      );
+      client.disconnect(true);
       return;
     }
-    // assign random color
+
+    const parsed = cookie.parse(rawCookie);
+    const token = parsed.accessToken;
+    if (!token) {
+      this.logger.warn(
+        `Client connected without accessToken cookie (socketId=${client.id})`,
+      );
+      client.disconnect(true);
+      return;
+    }
+
+    let payload: JwtPayload;
+    try {
+      payload = this.jwtService.verify<JwtPayload>(token, {
+        secret: process.env.JWT_ACCESS_SECRET,
+      });
+    } catch {
+      this.logger.warn(
+        `Client connected with invalid/expired token (socketId=${client.id})`,
+      );
+      client.disconnect(true);
+      return;
+    }
+
+    client.data.user = { id: payload.userId };
+
     const color = this.colors[Math.floor(Math.random() * this.colors.length)];
-    this.userColors.set(user.id, color);
-    this.logger.log(`Client connected: ${user.id}`);
+    this.userColors.set(payload.userId, color);
+
+    this.logger.log(
+      `Client connected: userId=${payload.userId}, socketId=${client.id}`,
+    );
   }
 
   handleDisconnect(client: Socket) {
-    const user = client.data.user;
-    this.userColors.delete(user.id);
-    this.logger.log(`Client disconnected: ${user.id}`);
+    const user = client.data.user as { id: string } | undefined;
+    if (user?.id) {
+      this.userColors.delete(user.id);
+      this.logger.log(
+        `Client disconnected: userId=${user.id}, socketId=${client.id}`,
+      );
+    } else {
+      this.logger.log(
+        `Client disconnected without user data: socketId=${client.id}`,
+      );
+    }
   }
 
   @SubscribeMessage('joinRoom')
-  handleJoin(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() dto: JoinRoomDto,
-  ) {
+  async handleJoin(client: Socket, dto: JoinRoomDto) {
+    const user = client.data.user as { id: string };
+    if (!user?.id) {
+      client.emit('error', 'Not authenticated');
+      client.disconnect(true);
+      return;
+    }
+
     client.join(dto.room);
-    const user = client.data.user;
+
+    const color = this.userColors.get(user.id)!;
+    const profile = await this.usersService.findById(user.id);
     this.server.to(dto.room).emit('userJoined', {
       userId: user.id,
-      color: this.userColors.get(user.id),
+      color,
+      firstName: profile?.firstName || '',
+      lastName: profile?.lastName || '',
     });
   }
 
   @SubscribeMessage('leaveRoom')
-  handleLeave(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() dto: JoinRoomDto,
-  ) {
+  handleLeave(client: Socket, dto: JoinRoomDto) {
+    const user = client.data.user as { id: string };
+    if (!user?.id) return;
+
     client.leave(dto.room);
-    const user = client.data.user;
     this.server.to(dto.room).emit('userLeft', { userId: user.id });
   }
 
   @SubscribeMessage('message')
-  async handleMessage(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() dto: ChatMessageDto,
-  ) {
-    const user = client.data.user;
+  async handleMessage(client: Socket, dto: ChatMessageDto) {
+    const user = client.data.user as { id: string };
+    if (!user?.id) {
+      client.emit('error', 'Not authenticated');
+      return;
+    }
+
     const color = this.userColors.get(user.id) || '#000000';
     const payload = {
       room: dto.room,
@@ -94,6 +157,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       color,
       timestamp: new Date().toISOString(),
     };
+
     this.server.to(dto.room).emit('message', payload);
   }
 }
